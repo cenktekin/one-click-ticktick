@@ -2,10 +2,13 @@
   "manifest_version": 3,
   "name": "One-Click TickTick",
   "description": "Instantly create a new TickTick task with a link to the current page in just one click!",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "background": {
     "service_worker": "/service-worker.js",
-    "type": "module"
+    "type": "module",
+    "scripts": [
+      "/background-ff.js"
+    ]
   },
   "action": {
     "default_icon": {
@@ -35,6 +38,22 @@
   ],
   "host_permissions": [
     "https://ticktick.com/oauth/token",
-    "https://api.ticktick.com/*"
-  ]
+    "https://api.ticktick.com/*",
+    "https://ticktick.com/oauth/authorize"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "one-click-ticktick@cenk-fix.local",
+      "strict_min_version": "126.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
 }

@@ -2,15 +2,8 @@ import {storage} from '/js/store.js';
 import {ticktickApi} from '/js/ticktickapi.js';
 import {oneClickTickTick, getSelectionInfo} from '/js/oneclickticktick.js';
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-    .then(function(registration) {
-      console.log('Registration successful, scope is:', registration.scope);
-    })
-    .catch(function(error) {
-      console.log('Service worker registration failed, error:', error);
-    });
-}
+// [FIX] Removed self-registration bug - service worker should not register itself
+// Firefox/Chrome extension service workers are auto-registered via manifest
 
 //////////////////
 // Event Handlers
@@ -27,7 +20,7 @@ chrome.runtime.onInstalled.addListener(function() {
     chrome.contextMenus.create({
         id: 'OneClickTickTick',
         title: "Send page to TickTick",
-        contexts: ["page", "frame", "link", "editable", "video", "audio", "browser_action", "page_action", "image"]}
+        contexts: ["page", "frame", "link", "editable", "video", "audio", "action", "image"]}
     );
     chrome.contextMenus.create({
         id: 'OneClickTickTick' + 'Selection',
@@ -68,6 +61,11 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         storage.loadOptions().then(opts => {
             sendResponse(opts);
         });
+    } else if (message.type === 'setManualToken') {
+        ticktickApi.setManualToken(message.payload.token).then(
+            result => sendResponse(result),
+            err => sendResponse({error: err.message || String(err)})
+        );
     } else if (message.type === 'setOptions') {
         console.log("setOptions:", message.payload)
         storage.set(message.payload);

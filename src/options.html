@@ -271,6 +271,32 @@
           Login
         </button>
       </div>
+      <div id="loginError" class="notification is-danger" style="display:none; margin-top:1rem;"></div>
+      <!-- Firefox Fallback: Manuel Token -->
+      <div id="manualTokenSection" class="box" style="margin-top:1.5rem;">
+        <h4 class="title is-6">🔧 Firefox için alternatif: Manuel Token</h4>
+        <div class="content is-small">
+          <p>Firefox'ta <code>chrome.identity.launchWebAuthFlow</code> bazen TickTick'in OAuth redirect_uri dogrulamasi yuzunden basarisiz olur.
+          Chrome'da sorunsuz calisir ama Firefox'ta TickTick bu extension'in redirect URI'sini (<code>https://&lt;id&gt;.extensions.allizom.org/</code>) reddedebilir.</p>
+          <p><strong>Cozum:</strong> TickTick Open API'den manuel token alip buraya yapistirin. Token <code>chrome.storage</code>'da saklanir, OAuth ile ayni sekilde calisir.</p>
+          <ol>
+            <li><a href="https://developer.ticktick.com/manage" target="_blank">developer.ticktick.com/manage</a> adresine gidin</li>
+            <li>Chrome'da bir kez login olup <code>chrome.storage.sync</code>'tan token'i kopyalayin (en kolayi)</li>
+          </ol>
+        </div>
+        <div class="field">
+          <label class="label is-small">Access Token</label>
+          <div class="control">
+            <input id="manualToken" class="input is-small" type="password" placeholder="paste TickTick access_token here">
+          </div>
+        </div>
+        <div class="field">
+          <div class="control">
+            <button id="saveManualToken" class="button is-small is-warning">Token'i Kaydet ve Giris Yap</button>
+          </div>
+        </div>
+        <div id="manualTokenError" class="notification is-danger is-light is-small" style="display:none; margin-top:0.5rem;"></div>
+      </div>
     </div>
   </section>
 </body>

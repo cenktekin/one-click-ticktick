@@ -34,7 +34,13 @@ export const ticktickApi = {
     },
     logout: function() {
         return new Promise((resolve, reject) => {
-            storage.remove('token').then(() => chrome.identity.clearAllCachedAuthTokens(() => { resolve() }));
+            storage.remove('token').then(() => {
+                if (chrome.identity && chrome.identity.clearAllCachedAuthTokens) {
+                    chrome.identity.clearAllCachedAuthTokens(() => { resolve({success:true}) });
+                } else {
+                    resolve({success:true});
+                }
+            });
         });
     },
     login: function() {
@@ -49,54 +55,88 @@ export const ticktickApi = {
         authURL.searchParams.append('redirect_uri', redirectUri); 
         authURL.searchParams.append('response_type', 'code'); 
     
-        console.log(authURL.href);
+        console.log("[TickTick] auth URL:", authURL.href);
+        console.log("[TickTick] redirectUri:", redirectUri);
         
         return new Promise((resolve, reject) => {
+            // Firefox fix: check chrome.runtime.lastError
             chrome.identity.launchWebAuthFlow(
                 {
                     url: authURL.href,
                     interactive: true
                 },
-                function(data) {
-                    console.log(data);
-                    var response = new URL(data);
-                    var authCode = response.searchParams.get('code');
-                    console.log("Auth Code: " + authCode);
-        
-                    if (!authCode) {
-                        // TODO: error handling
-                        console.log("Auth failed");
+                function(redirectUrl) {
+                    if (chrome.runtime.lastError) {
+                        console.error("[TickTick] launchWebAuthFlow lastError:", chrome.runtime.lastError.message);
+                        // Firefox'ta redirectUri mismatch olabiliyor - kullanıcıya bildir
+                        reject({ error: chrome.runtime.lastError.message, redirectUri: redirectUri, authUrl: authURL.href });
+                        return;
                     }
-        
-                    var tokenParams = {
-                        client_id: self.clientId,
-                        client_secret: self.clientSecret,
-                        code: authCode,
-                        grant_type: 'authorization_code',
-                        scope: scope,
-                        redirect_uri: redirectUri // effectively not used, but needs to be passed anyway
+                    console.log("[TickTick] redirectUrl:", redirectUrl);
+                    if (!redirectUrl) {
+                        console.error("[TickTick] No redirectUrl - user cancelled or error");
+                        reject({ error: "No redirect - user cancelled or TickTick rejected redirect_uri", redirectUri: redirectUri });
+                        return;
                     }
-        
-                    console.log(tokenParams);
-        
-                    fetch('https://ticktick.com/oauth/token', {
-                            method: 'POST',
-                            body: new URLSearchParams(tokenParams)
-                        })
-                        .then(function(response) {
-                            if (!response.ok)
-                                console.log("Response not ok: ", response);
-                            return response;
-                        })
-                        .then(response => response.json())
-                        .then(function(data) {
-                            console.log("Success:", data);
-                            console.log("Access token:", data.access_token);
-
-                            storage.set({token: data.access_token}).then(resolve);
-                    });
+                    try {
+                        var response = new URL(redirectUrl);
+                        var authCode = response.searchParams.get('code');
+                        console.log("[TickTick] Auth Code:", authCode);
+            
+                        if (!authCode) {
+                            let err = response.searchParams.get('error') || 'no_code';
+                            console.error("[TickTick] Auth failed, no code:", redirectUrl);
+                            reject({ error: "Auth failed: " + err, redirectUrl: redirectUrl, redirectUri: redirectUri });
+                            return;
+                        }
+            
+                        var tokenParams = {
+                            client_id: self.clientId,
+                            client_secret: self.clientSecret,
+                            code: authCode,
+                            grant_type: 'authorization_code',
+                            scope: scope,
+                            redirect_uri: redirectUri
+                        }
+            
+                        console.log("[TickTick] tokenParams:", tokenParams);
+            
+                        fetch('https://ticktick.com/oauth/token', {
+                                method: 'POST',
+                                body: new URLSearchParams(tokenParams)
+                            })
+                            .then(function(response) {
+                                if (!response.ok) {
+                                    console.error("[TickTick] Token response not ok:", response.status, response.statusText);
+                                    return response.text().then(t => { throw new Error("Token fetch failed: " + response.status + " " + t); });
+                                }
+                                return response;
+                            })
+                            .then(response => response.json())
+                            .then(function(data) {
+                                console.log("[TickTick] Success:", data);
+                                if (!data.access_token) {
+                                    throw new Error("No access_token in response: " + JSON.stringify(data));
+                                }
+                                console.log("[TickTick] Access token:", data.access_token);
+                                storage.set({token: data.access_token}).then(() => resolve({success:true, token: data.access_token}));
+                            })
+                            .catch(err => {
+                                console.error("[TickTick] Token error:", err);
+                                reject({ error: err.message || String(err) });
+                            });
+                    } catch(e) {
+                        console.error("[TickTick] URL parse error:", e);
+                        reject({ error: e.message });
+                    }
                 }
             );
         });
+    },
+    // Manual token set - Firefox fallback: kullanıcı TickTick Open API'dan token'ı manuel alıp yapıştırabilir
+    setManualToken: async function(token) {
+        if (!token || token.trim().length < 10) throw new Error("Invalid token");
+        await storage.set({token: token.trim()});
+        return {success:true};
     }
 };
