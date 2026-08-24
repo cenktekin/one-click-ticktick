@@ -54,13 +54,19 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (message.type === 'task') {
         oneClickTickTick(message.payload)
     } else if (message.type === 'login') {
-        ticktickApi.login().then(sendResponse);
+        ticktickApi.login().then(
+            result => sendResponse(result),
+            err => sendResponse({error: err.error || String(err), redirectUri: err.redirectUri})
+        );
     } else if (message.type === 'logout') {
-        ticktickApi.logout().then(sendResponse);
+        ticktickApi.logout().then(
+            result => sendResponse(result),
+            err => sendResponse({error: String(err)})
+        );
     } else if (message.type === 'getOptions') {
         storage.loadOptions().then(opts => {
             sendResponse(opts);
-        });
+        }).catch(err => sendResponse({error: err.message || String(err)}));
     } else if (message.type === 'setManualToken') {
         ticktickApi.setManualToken(message.payload.token).then(
             result => sendResponse(result),
@@ -72,7 +78,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     } else if (message.type === 'isLoggedIn') {
         ticktickApi.authorized().then(response => {
             sendResponse(response);
-        });
+        }).catch(err => sendResponse({error: String(err)}));
     } else {
         console.log("Unrecognized message:", message, sender);
     }

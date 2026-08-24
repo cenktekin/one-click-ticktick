@@ -40,7 +40,7 @@ export const ticktickApi = {
                 } else {
                     resolve({success:true});
                 }
-            });
+            }).catch(reject);
         });
     },
     login: function() {
@@ -99,7 +99,7 @@ export const ticktickApi = {
                             redirect_uri: redirectUri
                         }
             
-                        console.log("[TickTick] tokenParams:", tokenParams);
+                        console.log("[TickTick] exchanging code for token");
             
                         fetch('https://ticktick.com/oauth/token', {
                                 method: 'POST',

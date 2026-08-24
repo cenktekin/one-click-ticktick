@@ -10,13 +10,14 @@ var login = function() {
             return;
         }
         if (response && response.error) {
-            // Firefox OAuth redirect_uri mismatch - göster
-            let msg = "Login başarısız: " + response.error;
+            // Firefox OAuth redirect_uri mismatch - güvenli text ile göster (XSS önleme)
+            $('#loginError').empty();
+            $('#loginError').append($('<div>').text("Login başarısız: " + response.error));
             if (response.redirectUri) {
-                msg += "<br><small>Redirect URI: " + response.redirectUri + "</small>";
-                msg += "<br><small>TickTick bu redirect_uri'yi reddetti. Aşağıdaki manuel token yöntemini kullanın.</small>";
+                $('#loginError').append($('<small>').text("Redirect URI: " + response.redirectUri).css('display','block'));
+                $('#loginError').append($('<small>').text("TickTick bu redirect_uri'yi reddetti. Aşağıdaki manuel token yöntemini kullanın.").css('display','block'));
             }
-            $('#loginError').html(msg).show();
+            $('#loginError').show();
             $('#login').prop('disabled', false).text('Login');
             // Manuel token kutusunu göster
             $('#manualTokenSection').show();
@@ -66,10 +67,7 @@ var init = function() {
         $('#optionsSection').toggle(!!response);
         $('#logoutSection').toggle(!!response);
         $('#loginSection').toggle(!response);
-        // Eğer login değilse manuel token bölümünü de göster (FF fallback)
-        if (!response) {
-            $('#manualTokenSection').show();
-        }
+        // Manuel token kutusu default gizli, sadece login hatasında gösterilir (Chrome UX korunur)
     });
 
     $dueDate = $('#dueDate');

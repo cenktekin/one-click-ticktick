@@ -1,6 +1,4 @@
-// Firefox classic background - auto-generated from service-worker.js modules
-// Inlines storage + ticktickApi for non-module context
-
+// Firefox classic background - auto-generated from modules (ticktickapi 1.4.3 fix)
 const storage = {
     location: chrome.storage.sync,
     defaults: {
@@ -124,7 +122,7 @@ const ticktickApi = {
                 } else {
                     resolve({success:true});
                 }
-            });
+            }).catch(reject);
         });
     },
     login: function() {
@@ -183,7 +181,7 @@ const ticktickApi = {
                             redirect_uri: redirectUri
                         }
             
-                        console.log("[TickTick] tokenParams:", tokenParams);
+                        console.log("[TickTick] exchanging code for token");
             
                         fetch('https://ticktick.com/oauth/token', {
                                 method: 'POST',
@@ -226,7 +224,8 @@ const ticktickApi = {
 };
 
 
-// Inline simplified oneClickTickTick (import stripped)
+
+
 
 
 async function getTabContentAsMarkdown(tab) {
@@ -440,8 +439,6 @@ function getSelectionInfo(info, tab, callback) {
     });
 };
 
-
-// === Handlers from service-worker.js ===
 self.addEventListener('install', function(event) {
     // currently unused
 });
@@ -486,13 +483,19 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (message.type === 'task') {
         oneClickTickTick(message.payload)
     } else if (message.type === 'login') {
-        ticktickApi.login().then(sendResponse);
+        ticktickApi.login().then(
+            result => sendResponse(result),
+            err => sendResponse({error: err.error || String(err), redirectUri: err.redirectUri})
+        );
     } else if (message.type === 'logout') {
-        ticktickApi.logout().then(sendResponse);
+        ticktickApi.logout().then(
+            result => sendResponse(result),
+            err => sendResponse({error: String(err)})
+        );
     } else if (message.type === 'getOptions') {
         storage.loadOptions().then(opts => {
             sendResponse(opts);
-        });
+        }).catch(err => sendResponse({error: err.message || String(err)}));
     } else if (message.type === 'setManualToken') {
         ticktickApi.setManualToken(message.payload.token).then(
             result => sendResponse(result),
@@ -504,7 +507,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     } else if (message.type === 'isLoggedIn') {
         ticktickApi.authorized().then(response => {
             sendResponse(response);
-        });
+        }).catch(err => sendResponse({error: String(err)}));
     } else {
         console.log("Unrecognized message:", message, sender);
     }
