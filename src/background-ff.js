@@ -425,16 +425,14 @@ function createNotification(notificationId, options, taskPromise) {
 function getSelectionInfo(info, tab, callback) {
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: () => getSelection().toString()
+        func: () => getSelection().toString()
     }, function (response) {
-        var result = response[0].result;
-        var selection = info.selectionText;
-
-        if (!chrome.runtime.lastError && result.length > 0) {
-            selection = result[0];
+        var selection = info.selectionText || "";
+        if (!chrome.runtime.lastError && response && response[0] && response[0].result) {
+            var r = response[0].result;
+            if (typeof r === "string" && r.length > 0) selection = r;
         }
-
-        selection = info.selectionText.replace(/(\r\n|\n|\r)/gm, "\n\n");
+        selection = selection.replace(/(\r\n|\n|\r)/gm, "\n\n");
         callback(selection);
     });
 };
@@ -444,19 +442,42 @@ self.addEventListener('install', function(event) {
 });
 
 
-// add context menu items
-chrome.runtime.onInstalled.addListener(function() {
-    chrome.contextMenus.create({
-        id: 'OneClickTickTick',
-        title: "Send page to TickTick",
-        contexts: ["page", "frame", "link", "editable", "video", "audio", "action", "image"]}
-    );
-    chrome.contextMenus.create({
-        id: 'OneClickTickTick' + 'Selection',
-        title: "Send selection to TickTick",
-        contexts: ["selection"]}
-    );
-});
+function setupContextMenus() {
+    try {
+        chrome.contextMenus.removeAll(() => {
+            void chrome.runtime.lastError;
+            chrome.contextMenus.create({
+                id: 'OneClickTickTick',
+                title: "Send page to TickTick",
+                contexts: ["page", "frame", "link", "editable", "image", "video", "audio", "selection"]
+            }, () => void chrome.runtime.lastError);
+            chrome.contextMenus.create({
+                id: 'OneClickTickTickSelection',
+                title: "Send selection to TickTick",
+                contexts: ["selection"]
+            }, () => void chrome.runtime.lastError);
+        });
+    } catch (e) {
+        try {
+            chrome.contextMenus.create({
+                id: 'OneClickTickTick',
+                title: "Send page to TickTick",
+                contexts: ["page", "frame", "link", "editable", "image", "video", "audio", "selection"]
+            }, () => void chrome.runtime.lastError);
+        } catch (_) {}
+        try {
+            chrome.contextMenus.create({
+                id: 'OneClickTickTickSelection',
+                title: "Send selection to TickTick",
+                contexts: ["selection"]
+            }, () => void chrome.runtime.lastError);
+        } catch (_) {}
+    }
+}
+
+chrome.runtime.onInstalled.addListener(setupContextMenus);
+if (chrome.runtime.onStartup) chrome.runtime.onStartup.addListener(setupContextMenus);
+setupContextMenus();
 
 
 // handle extension button click

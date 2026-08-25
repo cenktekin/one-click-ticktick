@@ -15,19 +15,42 @@ self.addEventListener('install', function(event) {
 });
 
 
-// add context menu items
-chrome.runtime.onInstalled.addListener(function() {
-    chrome.contextMenus.create({
-        id: 'OneClickTickTick',
-        title: "Send page to TickTick",
-        contexts: ["page", "frame", "link", "editable", "video", "audio", "action", "image"]}
-    );
-    chrome.contextMenus.create({
-        id: 'OneClickTickTick' + 'Selection',
-        title: "Send selection to TickTick",
-        contexts: ["selection"]}
-    );
-});
+function setupContextMenus() {
+    try {
+        chrome.contextMenus.removeAll(() => {
+            void chrome.runtime.lastError;
+            chrome.contextMenus.create({
+                id: 'OneClickTickTick',
+                title: "Send page to TickTick",
+                contexts: ["page", "frame", "link", "editable", "image", "video", "audio", "selection"]
+            }, () => void chrome.runtime.lastError);
+            chrome.contextMenus.create({
+                id: 'OneClickTickTickSelection',
+                title: "Send selection to TickTick",
+                contexts: ["selection"]
+            }, () => void chrome.runtime.lastError);
+        });
+    } catch (e) {
+        try {
+            chrome.contextMenus.create({
+                id: 'OneClickTickTick',
+                title: "Send page to TickTick",
+                contexts: ["page", "frame", "link", "editable", "image", "video", "audio", "selection"]
+            }, () => void chrome.runtime.lastError);
+        } catch (_) {}
+        try {
+            chrome.contextMenus.create({
+                id: 'OneClickTickTickSelection',
+                title: "Send selection to TickTick",
+                contexts: ["selection"]
+            }, () => void chrome.runtime.lastError);
+        } catch (_) {}
+    }
+}
+
+chrome.runtime.onInstalled.addListener(setupContextMenus);
+if (chrome.runtime.onStartup) chrome.runtime.onStartup.addListener(setupContextMenus);
+setupContextMenus();
 
 
 // handle extension button click
