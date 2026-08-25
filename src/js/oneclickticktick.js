@@ -129,7 +129,7 @@ export async function oneClickTickTick(tab, contextInfo) {
                 chrome.runtime.openOptionsPage();
                 return;
             }
-            throw new Error("An error occured during task creation: " + response.status);
+            throw new Error("An error occurred during task creation: " + response.status);
         } else {
             const data = await response.clone().json();
             console.log("Success: ", data);
