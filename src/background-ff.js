@@ -391,6 +391,7 @@ async function oneClickTickTick(tab, contextInfo) {
         };
 
         notification = createNotification(null, newNotification, taskPromise);
+        void notification.catch(() => {});
     }
 
     try {
@@ -421,19 +422,23 @@ async function oneClickTickTick(tab, contextInfo) {
 
         if (notification) {
             notification.then(notId => {
-                chrome.notifications.update(notId, updatedContent);
-            }).catch(() => createNotification(null, updatedContent));
+                if (!notId) {
+                    void createNotification(null, updatedContent).catch(() => {});
+                    return;
+                }
+                chrome.notifications.update(notId, updatedContent, () => void chrome.runtime.lastError);
+            }).catch(() => { void createNotification(null, updatedContent).catch(() => {}); });
         } else {
-            createNotification(null, updatedContent);
+            void createNotification(null, updatedContent).catch(() => {});
         }
     }
 }
 
 function createNotification(notificationId, options, taskPromise) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         chrome.notifications.create(notificationId, options, function (createdId) {
             if (chrome.runtime.lastError) {
-                reject(chrome.runtime.lastError);
+                resolve(null);
                 return;
             }
 
