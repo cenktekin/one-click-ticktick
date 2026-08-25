@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "One-Click TickTick",
   "description": "Instantly create a new TickTick task with a link to the current page in just one click!",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "background": {
     "service_worker": "/service-worker.js",
     "type": "module",
@@ -30,6 +30,7 @@
   "permissions": [
     "notifications",
     "contextMenus",
+    "menus",
     "activeTab",
     "storage",
     "sessions",
@@ -44,7 +45,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "one-click-ticktick@cenk-fix.local",
-      "strict_min_version": "126.0",
+      "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [
           "none"

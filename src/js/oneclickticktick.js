@@ -199,16 +199,14 @@ function createNotification(notificationId, options, taskPromise) {
 export function getSelectionInfo(info, tab, callback) {
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: () => getSelection().toString()
+        func: () => getSelection().toString()
     }, function (response) {
-        var result = response[0].result;
-        var selection = info.selectionText;
-
-        if (!chrome.runtime.lastError && result.length > 0) {
-            selection = result[0];
+        var selection = info.selectionText || "";
+        if (!chrome.runtime.lastError && response && response[0] && response[0].result) {
+            var r = response[0].result;
+            if (typeof r === "string" && r.length > 0) selection = r;
         }
-
-        selection = info.selectionText.replace(/(\r\n|\n|\r)/gm, "\n\n");
+        selection = selection.replace(/(\r\n|\n|\r)/gm, "\n\n");
         callback(selection);
     });
 };
