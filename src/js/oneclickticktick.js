@@ -125,7 +125,7 @@ export async function oneClickTickTick(tab, contextInfo) {
                 chrome.runtime.openOptionsPage();
                 throw new Error("Unauthorized (401) - please login again in options");
             }
-            throw new Error("An error occured during task creation: " + response.status);
+            throw new Error("An error occurred during task creation: " + response.status);
         }
 
         const data = await response.clone().json();
@@ -158,10 +158,15 @@ function createNotification(notificationId, options, taskPromise) {
         chrome.notifications.create(notificationId, options, function (createdId) {
             if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
+                return;
             }
 
             var handler = function (id, buttonIndex, retries) {
                 if (id != createdId) {
+                    return;
+                }
+
+                if (!taskPromise) {
                     return;
                 }
 
@@ -175,12 +180,15 @@ function createNotification(notificationId, options, taskPromise) {
                             ticktickApi.task.delete(data.projectId, data.id);
                             chrome.notifications.clear(id);
                         }
-                    });
+                    })
+                    .catch(() => {});
 
                 chrome.notifications.onButtonClicked.removeListener(handler);
             };
 
-            chrome.notifications.onButtonClicked.addListener(handler);
+            if (options && Array.isArray(options.buttons) && options.buttons.length > 0 && taskPromise) {
+                chrome.notifications.onButtonClicked.addListener(handler);
+            }
             resolve(createdId);
         });
     });

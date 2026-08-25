@@ -115,6 +115,8 @@ const storage = {
 
 
 
+const MIN_TOKEN_LENGTH = 10;
+
 const ticktickApi = {
     clientId: 'TF8YKgsK67BA1htYrS',
     clientSecret: '&U2rl3Ci1(hl(zS!DVC6Dt^$#&v2cO07',
@@ -122,7 +124,7 @@ const ticktickApi = {
         try {
             const result = await storage.get('token');
             const token = result && result.token;
-            return !!token && token.trim().length > 10;
+            return typeof token === 'string' && token.trim().length >= MIN_TOKEN_LENGTH;
         } catch (_) {
             return false;
         }
@@ -255,7 +257,7 @@ const ticktickApi = {
         });
     },
     setManualToken: async function(token) {
-        if (!token || token.trim().length < 10) throw new Error("Invalid token");
+        if (typeof token !== 'string' || token.trim().length < MIN_TOKEN_LENGTH) throw new Error("Invalid token");
         const t = token.trim();
         await storage.set({token: t});
         try {
@@ -265,7 +267,7 @@ const ticktickApi = {
             if (!resp.ok) throw new Error("Token validation failed: " + resp.status);
         } catch (e) {
             await storage.remove('token');
-            throw new Error("Token geçersiz veya TickTick API erişemiyor: " + (e.message || String(e)));
+            throw new Error("Invalid token or TickTick API unreachable: " + (e.message || String(e)));
         }
         return {success:true};
     }
@@ -399,7 +401,7 @@ async function oneClickTickTick(tab, contextInfo) {
                 chrome.runtime.openOptionsPage();
                 throw new Error("Unauthorized (401) - please login again in options");
             }
-            throw new Error("An error occured during task creation: " + response.status);
+            throw new Error("An error occurred during task creation: " + response.status);
         }
 
         const data = await response.clone().json();
@@ -432,10 +434,15 @@ function createNotification(notificationId, options, taskPromise) {
         chrome.notifications.create(notificationId, options, function (createdId) {
             if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
+                return;
             }
 
             var handler = function (id, buttonIndex, retries) {
                 if (id != createdId) {
+                    return;
+                }
+
+                if (!taskPromise) {
                     return;
                 }
 
@@ -449,12 +456,15 @@ function createNotification(notificationId, options, taskPromise) {
                             ticktickApi.task.delete(data.projectId, data.id);
                             chrome.notifications.clear(id);
                         }
-                    });
+                    })
+                    .catch(() => {});
 
                 chrome.notifications.onButtonClicked.removeListener(handler);
             };
 
-            chrome.notifications.onButtonClicked.addListener(handler);
+            if (options && Array.isArray(options.buttons) && options.buttons.length > 0 && taskPromise) {
+                chrome.notifications.onButtonClicked.addListener(handler);
+            }
             resolve(createdId);
         });
     });

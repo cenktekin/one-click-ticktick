@@ -1,5 +1,7 @@
 import {storage} from '/js/store.js';
 
+const MIN_TOKEN_LENGTH = 10;
+
 export const ticktickApi = {
     clientId: 'TF8YKgsK67BA1htYrS',
     clientSecret: '&U2rl3Ci1(hl(zS!DVC6Dt^$#&v2cO07',
@@ -7,7 +9,7 @@ export const ticktickApi = {
         try {
             const result = await storage.get('token');
             const token = result && result.token;
-            return !!token && token.trim().length > 10;
+            return typeof token === 'string' && token.trim().length >= MIN_TOKEN_LENGTH;
         } catch (_) {
             return false;
         }
@@ -140,7 +142,7 @@ export const ticktickApi = {
         });
     },
     setManualToken: async function(token) {
-        if (!token || token.trim().length < 10) throw new Error("Invalid token");
+        if (typeof token !== 'string' || token.trim().length < MIN_TOKEN_LENGTH) throw new Error("Invalid token");
         const t = token.trim();
         await storage.set({token: t});
         try {
@@ -150,7 +152,7 @@ export const ticktickApi = {
             if (!resp.ok) throw new Error("Token validation failed: " + resp.status);
         } catch (e) {
             await storage.remove('token');
-            throw new Error("Token geçersiz veya TickTick API erişemiyor: " + (e.message || String(e)));
+            throw new Error("Invalid token or TickTick API unreachable: " + (e.message || String(e)));
         }
         return {success:true};
     }
