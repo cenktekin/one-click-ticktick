@@ -64,10 +64,15 @@ var init = function() {
             console.error(chrome.runtime.lastError);
             response = false;
         }
-        $('#optionsSection').toggle(!!response);
-        $('#logoutSection').toggle(!!response);
-        $('#loginSection').toggle(!response);
-        // Manuel token kutusu default gizli, sadece login hatasında gösterilir (Chrome UX korunur)
+        var isLoggedIn = !!response && response !== true ? !response.error : !!response;
+        if (response && response.error) isLoggedIn = false;
+        $('#optionsSection').toggle(isLoggedIn);
+        $('#logoutSection').toggle(isLoggedIn);
+        $('#loginSection').toggle(!isLoggedIn);
+        var isFirefox = navigator.userAgent.indexOf("Firefox") !== -1;
+        if (isFirefox && !isLoggedIn) {
+            $('#manualTokenSection').show();
+        }
     });
 
     $dueDate = $('#dueDate');

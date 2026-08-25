@@ -2,57 +2,90 @@
 const storage = {
     location: chrome.storage.sync,
     defaults: {
-        showNotification: true, 
-        taskTitle: "tabTitle", 
-        autoClose: false, 
-        dueDate: -1, 
+        showNotification: true,
+        taskTitle: "tabTitle",
+        autoClose: false,
+        dueDate: -1,
         targetListId: null,
         taskPriority: 0,
         tags: "",
         includePageContent: true
     },
+    _syncGet: function(keys) {
+        return new Promise((resolve) => {
+            try {
+                chrome.storage.sync.get(keys, (result) => {
+                    if (chrome.runtime.lastError) resolve({});
+                    else resolve(result || {});
+                });
+            } catch (_) { resolve({}); }
+        });
+    },
+    _localGet: function(keys) {
+        return new Promise((resolve) => {
+            try {
+                chrome.storage.local.get(keys, (result) => {
+                    if (chrome.runtime.lastError) resolve({});
+                    else resolve(result || {});
+                });
+            } catch (_) { resolve({}); }
+        });
+    },
     set: function(obj) {
-        return new Promise ((resolve, reject) => {
-            storage.location.set(obj, function() {
-                if (chrome.runtime.lastError) {
-                    return reject(chrome.runtime.lastError);
-                }
-                resolve();
-            });
+        const syncP = new Promise((resolve) => {
+            try { chrome.storage.sync.set(obj, () => resolve(!chrome.runtime.lastError)); } catch (_) { resolve(false); }
         });
+        const localP = new Promise((resolve) => {
+            try { chrome.storage.local.set(obj, () => resolve(!chrome.runtime.lastError)); } catch (_) { resolve(false); }
+        });
+        return Promise.all([syncP, localP]).then(() => {});
     },
-    get: function(obj) { 
-        return new Promise ((resolve, reject) => {
-            storage.location.get(obj, function(result) {
-                if (chrome.runtime.lastError) {
-                    return reject(chrome.runtime.lastError);
-                }
-                resolve(result);
-            });
-        });
+    get: async function(keys) {
+        const syncResult = await this._syncGet(keys);
+        const hasValue = (() => {
+            if (typeof keys === "string") return syncResult[keys] !== undefined;
+            if (Array.isArray(keys)) return keys.some(k => syncResult[k] !== undefined);
+            if (keys && typeof keys === "object") return Object.keys(keys).some(k => syncResult[k] !== undefined);
+            return false;
+        })();
+        if (hasValue) return syncResult;
+        const localResult = await this._localGet(keys);
+        const hasLocal = (() => {
+            if (typeof keys === "string") return localResult[keys] !== undefined;
+            if (Array.isArray(keys)) return keys.some(k => localResult[k] !== undefined);
+            if (keys && typeof keys === "object") return Object.keys(keys).some(k => localResult[k] !== undefined);
+            return false;
+        })();
+        if (hasLocal) {
+            const merged = { ...syncResult, ...localResult };
+            return merged;
+        }
+        return syncResult;
     },
-    remove: function(obj) { 
-        return new Promise ((resolve, reject) => {
-            storage.location.remove(obj, function(result) {
-                if (chrome.runtime.lastError) {
-                    return reject(chrome.runtime.lastError);
-                }
-                resolve(result);
-            });
+    remove: function(keys) {
+        const syncP = new Promise((resolve) => {
+            try { chrome.storage.sync.remove(keys, () => resolve()); } catch (_) { resolve(); }
         });
+        const localP = new Promise((resolve) => {
+            try { chrome.storage.local.remove(keys, () => resolve()); } catch (_) { resolve(); }
+        });
+        return Promise.all([syncP, localP]).then(() => {});
     },
     loadOptions: async function() {
         var self = this;
-        const storedOptions = await self.location.get(Object.keys(self.defaults));
-
-        // set default values if no value exists (undefined)
+        const keys = Object.keys(self.defaults);
+        const syncOptions = await self._syncGet(keys);
+        const localOptions = await self._localGet(keys);
+        const storedOptions = { ...localOptions, ...syncOptions };
+        for (const k of keys) {
+            if (syncOptions[k] !== undefined) storedOptions[k] = syncOptions[k];
+            else if (localOptions[k] !== undefined) storedOptions[k] = localOptions[k];
+        }
         for (const [key, value] of Object.entries(self.defaults)) {
             if (storedOptions[key] === undefined) {
                 storedOptions[key] = value;
             }
-        };
-
-        // set all values again in case defaults were not set in storage yet
+        }
         await self.set(storedOptions);
         return storedOptions;
     },
@@ -86,11 +119,17 @@ const ticktickApi = {
     clientId: 'TF8YKgsK67BA1htYrS',
     clientSecret: '&U2rl3Ci1(hl(zS!DVC6Dt^$#&v2cO07',
     authorized: async function() {
-        let token = (await storage.get('token')).token;
-        return !!token;
+        try {
+            const result = await storage.get('token');
+            const token = result && result.token;
+            return !!token && token.trim().length > 10;
+        } catch (_) {
+            return false;
+        }
     },
     rest: async function(method, path, data) {
-        const token = (await storage.get('token')).token;
+        const result = await storage.get('token');
+        const token = result && result.token;
 
         var config = {
             method: method,
@@ -215,10 +254,19 @@ const ticktickApi = {
             );
         });
     },
-    // Manual token set - Firefox fallback: kullanıcı TickTick Open API'dan token'ı manuel alıp yapıştırabilir
     setManualToken: async function(token) {
         if (!token || token.trim().length < 10) throw new Error("Invalid token");
-        await storage.set({token: token.trim()});
+        const t = token.trim();
+        await storage.set({token: t});
+        try {
+            const resp = await fetch('https://api.ticktick.com/open/v1/project', {
+                headers: { 'Authorization': 'Bearer ' + t }
+            });
+            if (!resp.ok) throw new Error("Token validation failed: " + resp.status);
+        } catch (e) {
+            await storage.remove('token');
+            throw new Error("Token geçersiz veya TickTick API erişemiyor: " + (e.message || String(e)));
+        }
         return {success:true};
     }
 };
@@ -325,7 +373,7 @@ async function oneClickTickTick(tab, contextInfo) {
         taskData.content += "Tags: " + tags
     }
 
-    const task = ticktickApi.task.create(taskData);
+    const taskPromise = ticktickApi.task.create(taskData);
     var notification = null;
 
     if (options.showNotification) {
@@ -340,25 +388,25 @@ async function oneClickTickTick(tab, contextInfo) {
             ]
         };
 
-        notification = createNotification(null, newNotification, task);
-    }
-
-    if (options.autoClose) {
-        chrome.tabs.remove(tab.id, function () { });
+        notification = createNotification(null, newNotification, taskPromise);
     }
 
     try {
-        var response = await task;
+        var response = await taskPromise;
 
         if (!response.ok) {
             if (response.status === 401) {
                 chrome.runtime.openOptionsPage();
-                return;
+                throw new Error("Unauthorized (401) - please login again in options");
             }
             throw new Error("An error occured during task creation: " + response.status);
-        } else {
-            const data = await response.clone().json();
-            console.log("Success: ", data);
+        }
+
+        const data = await response.clone().json();
+        console.log("Success: ", data);
+
+        if (options.autoClose) {
+            chrome.tabs.remove(tab.id, function () { });
         }
     } catch (error) {
         console.log(error);
@@ -372,19 +420,9 @@ async function oneClickTickTick(tab, contextInfo) {
         if (notification) {
             notification.then(notId => {
                 chrome.notifications.update(notId, updatedContent);
-            });
+            }).catch(() => createNotification(null, updatedContent));
         } else {
             createNotification(null, updatedContent);
-        }
-
-        if (options.autoClose) {
-            // try to recover the tab, only try it on the last session that was closed
-            // otherwise it might restore an unrelated session
-            chrome.sessions.getRecentlyClosed({ maxResults: 1 }, function (sessions) {
-                if (sessions.length > 0 && sessions[0].tab && sessions[0].tab.index === tab.index) {
-                    chrome.sessions.restore(sessions[0].tab.sessionId);
-                }
-            });
         }
     }
 }

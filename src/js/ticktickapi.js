@@ -4,11 +4,17 @@ export const ticktickApi = {
     clientId: 'TF8YKgsK67BA1htYrS',
     clientSecret: '&U2rl3Ci1(hl(zS!DVC6Dt^$#&v2cO07',
     authorized: async function() {
-        let token = (await storage.get('token')).token;
-        return !!token;
+        try {
+            const result = await storage.get('token');
+            const token = result && result.token;
+            return !!token && token.trim().length > 10;
+        } catch (_) {
+            return false;
+        }
     },
     rest: async function(method, path, data) {
-        const token = (await storage.get('token')).token;
+        const result = await storage.get('token');
+        const token = result && result.token;
 
         var config = {
             method: method,
@@ -133,10 +139,19 @@ export const ticktickApi = {
             );
         });
     },
-    // Manual token set - Firefox fallback: kullanıcı TickTick Open API'dan token'ı manuel alıp yapıştırabilir
     setManualToken: async function(token) {
         if (!token || token.trim().length < 10) throw new Error("Invalid token");
-        await storage.set({token: token.trim()});
+        const t = token.trim();
+        await storage.set({token: t});
+        try {
+            const resp = await fetch('https://api.ticktick.com/open/v1/project', {
+                headers: { 'Authorization': 'Bearer ' + t }
+            });
+            if (!resp.ok) throw new Error("Token validation failed: " + resp.status);
+        } catch (e) {
+            await storage.remove('token');
+            throw new Error("Token geçersiz veya TickTick API erişemiyor: " + (e.message || String(e)));
+        }
         return {success:true};
     }
 };

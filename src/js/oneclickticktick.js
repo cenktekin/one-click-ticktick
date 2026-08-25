@@ -99,7 +99,7 @@ export async function oneClickTickTick(tab, contextInfo) {
         taskData.content += "Tags: " + tags
     }
 
-    const task = ticktickApi.task.create(taskData);
+    const taskPromise = ticktickApi.task.create(taskData);
     var notification = null;
 
     if (options.showNotification) {
@@ -114,25 +114,25 @@ export async function oneClickTickTick(tab, contextInfo) {
             ]
         };
 
-        notification = createNotification(null, newNotification, task);
-    }
-
-    if (options.autoClose) {
-        chrome.tabs.remove(tab.id, function () { });
+        notification = createNotification(null, newNotification, taskPromise);
     }
 
     try {
-        var response = await task;
+        var response = await taskPromise;
 
         if (!response.ok) {
             if (response.status === 401) {
                 chrome.runtime.openOptionsPage();
-                return;
+                throw new Error("Unauthorized (401) - please login again in options");
             }
             throw new Error("An error occured during task creation: " + response.status);
-        } else {
-            const data = await response.clone().json();
-            console.log("Success: ", data);
+        }
+
+        const data = await response.clone().json();
+        console.log("Success: ", data);
+
+        if (options.autoClose) {
+            chrome.tabs.remove(tab.id, function () { });
         }
     } catch (error) {
         console.log(error);
@@ -146,19 +146,9 @@ export async function oneClickTickTick(tab, contextInfo) {
         if (notification) {
             notification.then(notId => {
                 chrome.notifications.update(notId, updatedContent);
-            });
+            }).catch(() => createNotification(null, updatedContent));
         } else {
             createNotification(null, updatedContent);
-        }
-
-        if (options.autoClose) {
-            // try to recover the tab, only try it on the last session that was closed
-            // otherwise it might restore an unrelated session
-            chrome.sessions.getRecentlyClosed({ maxResults: 1 }, function (sessions) {
-                if (sessions.length > 0 && sessions[0].tab && sessions[0].tab.index === tab.index) {
-                    chrome.sessions.restore(sessions[0].tab.sessionId);
-                }
-            });
         }
     }
 }
