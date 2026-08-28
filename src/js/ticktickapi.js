@@ -76,7 +76,7 @@ export const ticktickApi = {
                 function(redirectUrl) {
                     if (chrome.runtime.lastError) {
                         console.error("[TickTick] launchWebAuthFlow lastError:", chrome.runtime.lastError.message);
-                        // Firefox'ta redirectUri mismatch olabiliyor - kullanıcıya bildir
+                        // Firefox may have redirectUri mismatch - notify the user
                         reject({ error: chrome.runtime.lastError.message, redirectUri: redirectUri, authUrl: authURL.href });
                         return;
                     }

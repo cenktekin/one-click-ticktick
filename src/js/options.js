@@ -1,25 +1,25 @@
 var login = function() {
-    $('#login').prop('disabled', true).text('Giriş yapılıyor...');
+    $('#login').prop('disabled', true).text('Signing in...');
     $('#loginError').hide();
     chrome.runtime.sendMessage({type: 'login'}, function(response) {
         console.log("login response:", response);
         if (chrome.runtime.lastError) {
             console.error("lastError:", chrome.runtime.lastError);
-            $('#loginError').text("Hata: " + chrome.runtime.lastError.message).show();
+            $('#loginError').text("Error: " + chrome.runtime.lastError.message).show();
             $('#login').prop('disabled', false).text('Login');
             return;
         }
         if (response && response.error) {
-            // Firefox OAuth redirect_uri mismatch - güvenli text ile göster (XSS önleme)
+            // Firefox OAuth redirect_uri mismatch - use safe text insertion (XSS prevention)
             $('#loginError').empty();
-            $('#loginError').append($('<div>').text("Login başarısız: " + response.error));
+            $('#loginError').append($('<div>').text("Login failed: " + response.error));
             if (response.redirectUri) {
                 $('#loginError').append($('<small>').text("Redirect URI: " + response.redirectUri).css('display','block'));
-                $('#loginError').append($('<small>').text("TickTick bu redirect_uri'yi reddetti. Aşağıdaki manuel token yöntemini kullanın.").css('display','block'));
+                $('#loginError').append($('<small>').text("TickTick rejected this redirect_uri. Use the manual token method below.").css('display','block'));
             }
             $('#loginError').show();
             $('#login').prop('disabled', false).text('Login');
-            // Manuel token kutusunu göster
+            // Show manual token section
             $('#manualTokenSection').show();
             return;
         }
@@ -40,7 +40,7 @@ var setOptions = function(payload) {
 var setManualToken = function() {
     let token = $('#manualToken').val().trim();
     if (!token) {
-        $('#manualTokenError').text("Token boş olamaz").show();
+        $('#manualTokenError').text("Token cannot be empty").show();
         return;
     }
     $('#manualTokenError').hide();

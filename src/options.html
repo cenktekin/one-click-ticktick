@@ -272,16 +272,16 @@
         </button>
       </div>
       <div id="loginError" class="notification is-danger" style="display:none; margin-top:1rem;"></div>
-      <!-- Firefox Fallback: Manuel Token -->
+      <!-- Firefox Fallback: Manual Token -->
       <div id="manualTokenSection" class="box" style="margin-top:1.5rem; display:none;">
-        <h4 class="title is-6">🔧 Firefox için alternatif: Manuel Token</h4>
+        <h4 class="title is-6">🔧 Firefox alternative: Manual Token</h4>
         <div class="content is-small">
-          <p>Firefox'ta <code>chrome.identity.launchWebAuthFlow</code> bazen TickTick'in OAuth redirect_uri dogrulamasi yuzunden basarisiz olur.
-          Chrome'da sorunsuz calisir ama Firefox'ta TickTick bu extension'in redirect URI'sini (<code>https://&lt;id&gt;.extensions.allizom.org/</code>) reddedebilir.</p>
-          <p><strong>Cozum:</strong> TickTick Open API'den manuel token alip buraya yapistirin. Token <code>chrome.storage</code>'da saklanir, OAuth ile ayni sekilde calisir.</p>
+          <p>In Firefox, <code>chrome.identity.launchWebAuthFlow</code> may fail due to TickTick's OAuth redirect_uri validation.
+          It works reliably in Chrome, but in Firefox TickTick may reject this extension's redirect URI (<code>https://&lt;id&gt;.extensions.allizom.org/</code>).</p>
+          <p><strong>Solution:</strong> Obtain a manual token from the TickTick Open API and paste it here. The token is stored in <code>chrome.storage</code> and works the same as OAuth.</p>
           <ol>
-            <li><a href="https://developer.ticktick.com/manage" target="_blank" rel="noopener noreferrer">developer.ticktick.com/manage</a> adresine gidin</li>
-            <li>Chrome'da bir kez login olup <code>chrome.storage.sync</code>'tan token'i kopyalayin (en kolayi)</li>
+            <li>Go to <a href="https://developer.ticktick.com/manage" target="_blank" rel="noopener noreferrer">developer.ticktick.com/manage</a></li>
+            <li>Log in once in Chrome and copy the token from <code>chrome.storage.sync</code> (easiest method)</li>
           </ol>
         </div>
         <div class="field">
@@ -292,7 +292,7 @@
         </div>
         <div class="field">
           <div class="control">
-            <button id="saveManualToken" class="button is-small is-warning">Token'i Kaydet ve Giris Yap</button>
+            <button id="saveManualToken" class="button is-small is-warning">Save Token and Sign In</button>
           </div>
         </div>
         <div id="manualTokenError" class="notification is-danger is-light is-small" style="display:none; margin-top:0.5rem;"></div>
