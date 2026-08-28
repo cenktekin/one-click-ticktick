@@ -1,1 +1,6 @@
 *.zip
+PROJECT_TRACKER.md
+.omo/
+src/.amo-upload-uuid
+src/web-ext-artifacts/
+package-*.zip
