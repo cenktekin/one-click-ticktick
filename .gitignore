@@ -3,4 +3,6 @@ PROJECT_TRACKER.md
 .omo/
 src/.amo-upload-uuid
 src/web-ext-artifacts/
+web-ext-artifacts/
 package-*.zip
+node_modules/

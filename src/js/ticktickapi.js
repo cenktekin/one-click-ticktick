@@ -89,7 +89,6 @@ export const ticktickApi = {
                     try {
                         var response = new URL(redirectUrl);
                         var authCode = response.searchParams.get('code');
-                        console.log("[TickTick] Auth Code:", authCode);
             
                         if (!authCode) {
                             let err = response.searchParams.get('error') || 'no_code';
@@ -122,12 +121,10 @@ export const ticktickApi = {
                             })
                             .then(response => response.json())
                             .then(function(data) {
-                                console.log("[TickTick] Success:", data);
                                 if (!data.access_token) {
                                     throw new Error("No access_token in response: " + JSON.stringify(data));
                                 }
-                                console.log("[TickTick] Access token:", data.access_token);
-                                storage.set({token: data.access_token}).then(() => resolve({success:true, token: data.access_token}));
+                                storage.set({token: data.access_token}).then(() => resolve({success:true}));
                             })
                             .catch(err => {
                                 console.error("[TickTick] Token error:", err);

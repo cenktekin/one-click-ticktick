@@ -1,0 +1,15 @@
+{
+  "name": "one-click-ticktick-firefox",
+  "version": "1.4.7",
+  "private": true,
+  "description": "Firefox port of the One-Click TickTick extension",
+  "scripts": {
+    "bundle": "node scripts/bundle-ff.mjs",
+    "check": "node scripts/check.mjs",
+    "lint": "web-ext lint --source-dir=src",
+    "build": "web-ext build --source-dir=src --artifacts-dir=web-ext-artifacts --overwrite-dest"
+  },
+  "devDependencies": {
+    "web-ext": "^10.8.0"
+  }
+}
