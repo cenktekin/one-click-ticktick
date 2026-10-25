@@ -23,6 +23,7 @@ const HEADER = [
 
 function toClassic(source) {
     return source
+        .replace(/\r\n/g, '\n')
         .split('\n')
         .filter(line => !/^\s*import\s/.test(line))
         .map(line => line.replace(/^export\s+(async\s+function|function|const|let|class)\b/, '$1'))
