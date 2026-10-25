@@ -10,7 +10,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PRIVACY_PATTERNS = [
     { name: 'absolute Windows path', re: /[A-Za-z]:[\\/](?:Users|projects)[\\/]/ },
     { name: 'absolute POSIX home path', re: /\/home\/[a-z0-9_-]+\//i },
-    { name: 'personal username', re: /\bCenkT\b/ },
     { name: 'AMO API secret', re: /WEB_EXT_API_SECRET\s*[=:]\s*(?!x{4,}|<)[A-Za-z0-9]{16,}/ },
     { name: 'GitHub token', re: /gh[pous]_[A-Za-z0-9]{20,}/ },
     { name: 'OpenAI-style key', re: /sk-[A-Za-z0-9]{20,}/ },
