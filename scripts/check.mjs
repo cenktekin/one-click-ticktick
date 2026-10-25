@@ -57,7 +57,8 @@ for (const rel of listSources()) {
 }
 
 const expected = buildBundle();
-const actual = readFileSync(join(ROOT, 'src', 'background-ff.js'), 'utf8');
+// Git may check files out with CRLF on Windows; compare content, not line endings.
+const actual = readFileSync(join(ROOT, 'src', 'background-ff.js'), 'utf8').replace(/\r\n/g, '\n');
 if (expected !== actual) {
     fail('src/background-ff.js is stale - run `npm run bundle`');
 } else {
